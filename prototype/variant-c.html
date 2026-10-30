@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Variant C - Timeline</title>
+<style>
+  body{font-family:Inter,system-ui,sans-serif;background:#f7f7f8;color:#222;margin:0;padding:24px}
+  .wrap{max-width:640px;margin:0 auto}
+  h1{font-size:18px;margin:0 0 16px}
+  .timeline{position:relative;padding-left:20px}
+  .timeline::before{content:'';position:absolute;left:9px;top:0;bottom:0;width:2px;background:#e2e2e5}
+  .titem{position:relative;margin-bottom:14px}
+  .titem::before{content:'';position:absolute;left:-15px;top:4px;width:10px;height:10px;border-radius:50%;background:#bbb;border:2px solid #fff}
+  .titem.done::before{background:#2e7d32}
+  .titem.running::before{background:#b54708;animation:pulse 1.2s ease-in-out infinite}
+  .titem.failed::before{background:#b3261e}
+  .ttitle{font-size:13px;font-weight:600}
+  .tsub{font-size:12px;color:#666;margin-top:2px}
+  .tcard{margin-top:6px;border:1px solid #e2e2e5;border-radius:8px;padding:8px;background:#fff;font-size:12px}
+  .shimmer{height:8px;border-radius:4px;background:linear-gradient(90deg,#eee,#f7f7f8,#eee);background-size:200% 100%;animation:sh 1.3s linear infinite;margin:4px 0}
+  @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+  button{border:1px solid #e2e2e5;background:#fff;border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Variant C — Timeline</h1>
+  <div class="timeline">
+    <div class="titem done">
+      <div class="ttitle">Read browser context</div>
+      <div class="tsub">Read 4 tabs · done</div>
+      <div class="tcard">Login, Home, ChatGPT, Extensions</div>
+    </div>
+    <div class="titem running">
+      <div class="ttitle">Find interactive elements</div>
+      <div class="tsub">running</div>
+      <div class="shimmer" style="width:100%"></div>
+      <div class="shimmer" style="width:70%"></div>
+    </div>
+    <div class="titem failed">
+      <div class="ttitle">Read browser context</div>
+      <div class="tsub" style="color:#b3261e">Need page access permission</div>
+      <button>Retry</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

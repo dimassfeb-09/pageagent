@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Variant A - Vertical Stepper</title>
+<style>
+  body{font-family:Inter,system-ui,sans-serif;background:#f7f7f8;color:#222;margin:0;padding:24px}
+  .wrap{max-width:640px;margin:0 auto}
+  h1{font-size:18px;margin:0 0 16px}
+  .stepper{border:1px solid #e2e2e5;border-radius:12px;background:#fff;padding:12px}
+  .step{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f2}
+  .step:last-child{border-bottom:0}
+  .dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#f4f4f5;color:#666;flex-shrink:0}
+  .step.running .dot{background:#fff3e0;color:#b54708}
+  .step.done .dot{background:#e8f5e9;color:#2e7d32}
+  .step.failed .dot{background:#fee4e2;color:#b3261e}
+  .step-body{flex:1;min-width:0}
+  .step-title{font-weight:600;font-size:13px}
+  .step-sub{font-size:12px;color:#666;margin-top:2px}
+  .shimmer{height:8px;border-radius:4px;margin:6px 0;background:linear-gradient(90deg,#eee,#f7f7f8,#eee);background-size:200% 100%;animation:sh 1.3s linear infinite}
+  .shimmer.w{width:100%}.shimmer.m{width:70%}
+  .details{margin-top:6px;font-size:11.5px;color:#666}
+  .details summary{cursor:pointer}
+  @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .badge{font-size:11px;padding:2px 6px;border-radius:999px;background:#f4f4f5;color:#666}
+  .actions{display:flex;gap:6px;margin-top:6px}
+  button{border:1px solid #e2e2e5;background:#fff;border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Variant A — Vertical Stepper</h1>
+  <div class="stepper">
+    <div class="step done">
+      <div class="dot">✓</div>
+      <div class="step-body">
+        <div class="step-title">Read browser context <span class="badge">done</span></div>
+        <div class="step-sub">Read 4 tabs</div>
+        <details class="details"><summary>Details</summary><div>tabs: Login, Home, ChatGPT, Extensions</div></details>
+      </div>
+    </div>
+    <div class="step running">
+      <div class="dot">⟳</div>
+      <div class="step-body">
+        <div class="step-title">Find interactive elements <span class="badge">running</span></div>
+        <div class="shimmer w"></div>
+        <div class="shimmer m"></div>
+      </div>
+    </div>
+    <div class="step failed">
+      <div class="dot">!</div>
+      <div class="step-body">
+        <div class="step-title">Read browser context <span class="badge">failed</span></div>
+        <div class="step-sub" style="color:#b3261e">Need page access permission</div>
+        <div class="actions"><button>Retry</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

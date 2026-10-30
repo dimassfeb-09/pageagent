@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@theme {
+  --color-flexoki-green-100: #e6f0e4;
+  --color-flexoki-green-200: #c8dfc3;
+  --color-flexoki-green-500: #47885a;
+  --color-flexoki-green-600: #3a7049;
+  --color-flexoki-base-500: #6f6e69;
+  --color-flexoki-base-600: #575653;
+}
+html, body { background: #fffdf6; }
+
+@keyframes bf-fade-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.onboard-anim { animation: bf-fade-up .35s cubic-bezier(.22,1,.36,1) both; }
+@keyframes bf-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.stream-cursor { display: inline-block; color: #47885a; animation: bf-blink 1s step-end infinite; }
+:focus-visible { outline: 2px solid #47885a; outline-offset: 2px; }

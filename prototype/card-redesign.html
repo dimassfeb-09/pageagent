@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Card Redesign (Prototype)</title>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--line:#e6e7eb;--text:#1f2023;--muted:#6b6c72;--accent:#2563eb;--err:#b91c1c;--ok:#15803d;--run:#b45309}
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:28px}
+  .wrap{max-width:900px;margin:0 auto}
+  h1{font-size:20px;margin:0 0 6px;letter-spacing:-.3px}
+  .sub{font-size:13px;color:var(--muted);margin:0 0 20px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px}
+  .section-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:24px 0 10px}
+  /* Variant 1: Premium card */
+  .c1{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .c1 .head{display:flex;align-items:center;gap:12px}
+  .c1 .icon{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#f2f3f6;color:#555;flex-shrink:0}
+  .c1.running .icon{background:#fff4e5;color:var(--run)}
+  .c1.done .icon{background:#ecfdf3;color:var(--ok)}
+  .c1.failed .icon{background:#fef2f2;color:var(--err)}
+  .c1 .title{font-weight:600;font-size:13.5px;flex:1}
+  .c1 .status{font-size:11.5px;color:var(--muted)}
+  .c1 .summary{margin-top:6px;font-size:12px;color:#444}
+  .c1 .shimmer{height:8px;border-radius:4px;margin:8px 0 2px;background:linear-gradient(90deg,#f0f0f2,#f7f7f8,#f0f0f2);background-size:200% 100%;animation:sh 1.3s linear infinite}
+  .c1 .shimmer.w{width:100%}.c1 .shimmer.m{width:68%}
+  .c1 .error{margin-top:6px;padding:8px 10px;border-radius:8px;background:#fef2f2;color:var(--err);font-size:12px}
+  .c1 details{margin-top:8px}
+  .c1 summary{cursor:pointer;font-size:11.5px;color:var(--muted);user-select:none}
+  .c1 pre{margin:8px 0 0;padding:10px;border-radius:8px;background:#f7f7f9;font-size:11px;overflow:auto;color:#444}
+  .c1 .actions{margin-top:8px;display:flex;gap:6px}
+  .c1 button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer}
+  .c1 button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  /* Variant 2: Minimal row */
+  .c2{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+  .c2 .icon{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;background:#f2f3f6;color:#555;flex-shrink:0}
+  .c2.running .icon{background:#fff4e5;color:var(--run)}
+  .c2.done .icon{background:#ecfdf3;color:var(--ok)}
+  .c2.failed .icon{background:#fef2f2;color:var(--err)}
+  .c2 .title{flex:1;font-size:13px;font-weight:500}
+  .c2 .meta{font-size:11.5px;color:var(--muted)}
+  .c2.running .meta{color:var(--run)}
+  .c2.failed .meta{color:var(--err)}
+  .c2 .shimmer{height:6px;border-radius:3px;background:linear-gradient(90deg,#f0f0f2,#f7f7f8,#f0f0f2);background-size:200% 100%;animation:sh 1.3s linear infinite;margin:4px 0}
+  .c2 .error{width:100%;font-size:12px;color:var(--err);margin-top:4px}
+  /* Variant 3: Timeline card */
+  .c3{position:relative;padding-left:28px}
+  .c3::before{content:'';position:absolute;left:9px;top:4px;bottom:4px;width:2px;background:var(--line)}
+  .c3 .dot{position:absolute;left:4px;top:6px;width:12px;height:12px;border-radius:50%;background:#bbb;border:2px solid #fff}
+  .c3.done .dot{background:var(--ok)}
+  .c3.running .dot{background:var(--run);animation:pulse 1.2s ease-in-out infinite}
+  .c3.failed .dot{background:var(--err)}
+  .c3 .title{font-size:13px;font-weight:600}
+  .c3 .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .c3 .body{margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:12px;color:#444}
+  .c3 .shimmer{height:8px;border-radius:4px;background:linear-gradient(90deg,#f0f0f2,#f7f7f8,#f0f0f2);background-size:200% 100%;animation:sh 1.3s linear infinite;margin:4px 0}
+  .c3 button{margin-top:6px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer}
+  /* Variant 4: Compact expandable */
+  .c4{border:1px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden}
+  .c4 .head{display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer}
+  .c4 .icon{width:20px;height:20px;border-radius:5px;display:grid;place-items:center;background:#f2f3f6;color:#555;flex-shrink:0}
+  .c4.running .icon{background:#fff4e5;color:var(--run)}
+  .c4.done .icon{background:#ecfdf3;color:var(--ok)}
+  .c4.failed .icon{background:#fef2f2;color:var(--err)}
+  .c4 .title{flex:1;font-size:13px;font-weight:500}
+  .c4 .meta{font-size:11.5px;color:var(--muted)}
+  .c4 .details{padding:8px 10px;border-top:1px solid var(--line);background:#fafafa;font-size:11.5px;color:#555}
+  .c4 .shimmer{height:6px;border-radius:3px;background:linear-gradient(90deg,#f0f0f2,#f7f7f8,#f0f0f2);background-size:200% 100%;animation:sh 1.3s linear infinite;margin:4px 0}
+  .c4 button{margin-top:6px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer}
+  /* Variant 5: Glass */
+  .c5{background:rgba(255,255,255,.7);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.6);border-radius:14px;padding:14px 16px;box-shadow:0 4px 20px rgba(0,0,0,.05)}
+  .c5 .head{display:flex;align-items:center;gap:12px}
+  .c5 .icon{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(242,243,246,.8);color:#555;flex-shrink:0}
+  .c5.running .icon{background:rgba(255,244,229,.9);color:var(--run)}
+  .c5.done .icon{background:rgba(236,253,243,.9);color:var(--ok)}
+  .c5.failed .icon{background:rgba(254,242,242,.9);color:var(--err)}
+  .c5 .title{font-weight:600;font-size:13.5px;flex:1}
+  .c5 .status{font-size:11.5px;color:var(--muted)}
+  .c5 .summary{margin-top:6px;font-size:12px;color:#444}
+  .c5 .shimmer{height:8px;border-radius:4px;margin:8px 0 2px;background:linear-gradient(90deg,rgba(240,240,242,.6),rgba(247,247,248,.9),rgba(240,240,242,.6));background-size:200% 100%;animation:sh 1.3s linear infinite}
+  .c5 .shimmer.w{width:100%}.c5 .shimmer.m{width:68%}
+  .c5 .error{margin-top:6px;padding:8px 10px;border-radius:8px;background:rgba(254,242,242,.8);color:var(--err);font-size:12px}
+  /* Variant 6: Outline */
+  .c6{border:1.5px dashed var(--line);border-radius:12px;padding:12px 14px;background:transparent}
+  .c6 .head{display:flex;align-items:center;gap:10px}
+  .c6 .icon{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;border:1px solid var(--line);color:#555;flex-shrink:0}
+  .c6.running .icon{border-color:var(--run);color:var(--run)}
+  .c6.done .icon{border-color:var(--ok);color:var(--ok)}
+  .c6.failed .icon{border-color:var(--err);color:var(--err)}
+  .c6 .title{font-weight:500;font-size:13px;flex:1}
+  .c6 .meta{font-size:11.5px;color:var(--muted)}
+  .c6 .shimmer{height:6px;border-radius:3px;background:linear-gradient(90deg,#eef0f3,#f7f7f8,#eef0f3);background-size:200% 100%;animation:sh 1.3s linear infinite;margin:6px 0 2px}
+  .c6 .error{font-size:12px;color:var(--err);margin-top:4px}
+  /* Variant 7: Step bar */
+  .c7{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .c7 .top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .c7 .icon{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;background:#f2f3f6;color:#555;flex-shrink:0}
+  .c7.running .icon{background:#fff4e5;color:var(--run)}
+  .c7.done .icon{background:#ecfdf3;color:var(--ok)}
+  .c7.failed .icon{background:#fef2f2;color:var(--err)}
+  .c7 .title{font-size:13px;font-weight:600;flex:1}
+  .c7 .steps{display:flex;gap:4px}
+  .c7 .step{flex:1;height:4px;border-radius:2px;background:#e6e7eb}
+  .c7 .step.active{background:var(--accent)}
+  .c7 .step.done{background:var(--ok)}
+  .c7 .step.fail{background:var(--err)}
+  .c7 .summary{margin-top:6px;font-size:12px;color:#444}
+  .c7 .shimmer{height:6px;border-radius:3px;background:linear-gradient(90deg,#f0f0f2,#f7f7f8,#f0f0f2);background-size:200% 100%;animation:sh 1.3s linear infinite;margin:4px 0}
+  /* Variant 8: Inline chip */
+  .c8{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:12px}
+  .c8 .icon{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;background:#f2f3f6;color:#555;flex-shrink:0}
+  .c8.running .icon{background:#fff4e5;color:var(--run)}
+  .c8.done .icon{background:#ecfdf3;color:var(--ok)}
+  .c8.failed .icon{background:#fef2f2;color:var(--err)}
+  .c8 .label{font-weight:500}
+  .c8 .meta{color:var(--muted)}
+  .c8 .shimmer{height:4px;border-radius:2px;background:linear-gradient(90deg,#f0f0f2,#f7f7f8,#f0f0f2);background-size:200% 100%;animation:sh 1.3s linear infinite;margin:4px 0;width:80px}
+  /* Variant 9: Stacked status */
+  .c9{display:flex;gap:12px;padding:12px 14px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+  .c9 .badge{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+  .c9.running .badge{background:#fff4e5;color:var(--run)}
+  .c9.done .badge{background:#ecfdf3;color:var(--ok)}
+  .c9.failed .badge{background:#fef2f2;color:var(--err)}
+  .c9 .content{flex:1;min-width:0}
+  .c9 .title{font-size:13px;font-weight:600}
+  .c9 .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .c9 .shimmer{height:6px;border-radius:3px;background:linear-gradient(90deg,#f0f0f2,#f7f7f8,#f0f0f2);background-size:200% 100%;animation:sh 1.3s linear infinite;margin:6px 0 2px}
+  .c9 .shimmer.w{width:100%}.c9 .shimmer.m{width:70%}
+  .c9 button{margin-top:6px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer}
+  /* Variant 10: Dark accent */
+  .c10{background:#1f2023;color:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+  .c10 .head{display:flex;align-items:center;gap:10px}
+  .c10 .icon{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;background:rgba(255,255,255,.1);color:#fff;flex-shrink:0}
+  .c10 .title{font-size:13px;font-weight:600;flex:1}
+  .c10 .meta{font-size:11.5px;color:rgba(255,255,255,.6)}
+  .c10 .shimmer{height:6px;border-radius:3px;background:linear-gradient(90deg,rgba(255,255,255,.08),rgba(255,255,255,.18),rgba(255,255,255,.08));background-size:200% 100%;animation:sh 1.3s linear infinite;margin:6px 0 2px}
+  .c10 .error{font-size:12px;color:#fca5a5;margin-top:4px}
+  .c10 button{margin-top:6px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fff;border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer}
+  @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+  .spin{animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Card Redesign (Prototype)</h1>
+  <p class="sub">Clean, minimalist tool card variants for "Read browser context" and friends. States: running / done / failed.</p>
+
+  <div class="section-title">Variant 1 — Premium Card</div>
+  <div class="grid">
+    <div class="c1 done">
+      <div class="head">
+        <div class="icon"><i data-lucide="check"></i></div>
+        <div class="title">Read browser context</div>
+        <div class="status">done</div>
+      </div>
+      <div class="summary">Read 4 tabs: Login, Home, ChatGPT, Extensions</div>
+      <details><summary>Details</summary><pre>tabs: [1566066573, 1566066586, 1566066594, 1566066663]</pre></details>
+    </div>
+    <div class="c1 running">
+      <div class="head">
+        <div class="icon"><i data-lucide="loader-2" class="spin"></i></div>
+        <div class="title">Find interactive elements</div>
+        <div class="status">running</div>
+      </div>
+      <div class="shimmer w"></div>
+      <div class="shimmer m"></div>
+    </div>
+    <div class="c1 failed">
+      <div class="head">
+        <div class="icon"><i data-lucide="alert-circle"></i></div>
+        <div class="title">Read browser context</div>
+        <div class="status">failed</div>
+      </div>
+      <div class="error">Need page access permission. Open extension settings to grant it.</div>
+      <div class="actions"><button class="primary">Retry</button><button>Details</button></div>
+    </div>
+  </div>
+
+  <div class="section-title">Variant 2 — Minimal Row</div>
+  <div class="grid">
+    <div class="c2 done">
+      <div class="icon"><i data-lucide="check"></i></div>
+      <div class="title">Read browser context</div>
+      <div class="meta">4 tabs</div>
+    </div>
+    <div class="c2 running">
+      <div class="icon"><i data-lucide="loader-2" class="spin"></i></div>
+      <div class="title">Find interactive elements</div>
+      <div class="meta">running</div>
+      <div style="width:100%">
+        <div class="shimmer w"></div>
+        <div class="shimmer m"></div>
+      </div>
+    </div>
+    <div class="c2 failed">
+      <div class="icon"><i data-lucide="alert-circle"></i></div>
+      <div class="title">Read browser context</div>
+      <div class="meta">permission needed</div>
+      <div class="error">Need page access permission.</div>
+    </div>
+  </div>
+
+  <div class="section-title">Variant 3 — Timeline</div>
+  <div class="grid">
+    <div class="c3 done">
+      <div class="dot"></div>
+      <div class="title">Read browser context</div>
+      <div class="sub">Read 4 tabs · done</div>
+      <div class="body">Login, Home, ChatGPT, Extensions</div>
+    </div>
+    <div class="c3 running">
+      <div class="dot"></div>
+      <div class="title">Find interactive elements</div>
+      <div class="sub">running</div>
+      <div class="shimmer w"></div>
+      <div class="shimmer m"></div>
+    </div>
+    <div class="c3 failed">
+      <div class="dot"></div>
+      <div class="title">Read browser context</div>
+      <div class="sub" style="color:var(--err)">Need page access permission</div>
+      <button>Retry</button>
+    </div>
+  </div>
+
+  <div class="section-title">Variant 4 — Compact Expandable</div>
+  <div class="grid">
+    <div class="c4 done">
+      <div class="head">
+        <div class="icon"><i data-lucide="check"></i></div>
+        <div class="title">Read browser context</div>
+        <div class="meta">4 tabs</div>
+      </div>
+      <div class="details">Login, Home, ChatGPT, Extensions</div>
+    </div>
+    <div class="c4 running">
+      <div class="head">
+        <div class="icon"><i data-lucide="loader-2" class="spin"></i></div>
+        <div class="title">Find interactive elements</div>
+        <div class="meta">running</div>
+      </div>
+      <div style="padding:0 10px 8px">
+        <div class="shimmer w"></div>
+        <div class="shimmer m"></div>
+      </div>
+    </div>
+    <div class="c4 failed">
+      <div class="head">
+        <div class="icon"><i data-lucide="alert-circle"></i></div>
+        <div class="title">Read browser context</div>
+        <div class="meta">permission needed</div>
+      </div>
+      <div class="details">Need page access permission. <button>Retry</button></div>
+    </div>
+  </div>
+  <div class="section-title">Variant 5 — Glass</div>
+  <div class="grid">
+    <div class="c5 done">
+      <div class="head">
+        <div class="icon"><i data-lucide="check"></i></div>
+        <div class="title">Read browser context</div>
+        <div class="status">done</div>
+      </div>
+      <div class="summary">Read 4 tabs: Login, Home, ChatGPT, Extensions</div>
+    </div>
+    <div class="c5 running">
+      <div class="head">
+        <div class="icon"><i data-lucide="loader-2" class="spin"></i></div>
+        <div class="title">Find interactive elements</div>
+        <div class="status">running</div>
+      </div>
+      <div class="shimmer w"></div>
+      <div class="shimmer m"></div>
+    </div>
+    <div class="c5 failed">
+      <div class="head">
+        <div class="icon"><i data-lucide="alert-circle"></i></div>
+        <div class="title">Read browser context</div>
+        <div class="status">failed</div>
+      </div>
+      <div class="error">Need page access permission.</div>
+    </div>
+  </div>
+
+  <div class="section-title">Variant 6 — Outline</div>
+  <div class="grid">
+    <div class="c6 done">
+      <div class="head">
+        <div class="icon"><i data-lucide="check"></i></div>
+        <div class="title">Read browser context</div>
+        <div class="meta">4 tabs</div>
+      </div>
+    </div>
+    <div class="c6 running">
+      <div class="head">
+        <div class="icon"><i data-lucide="loader-2" class="spin"></i></div>
+        <div class="title">Find interactive elements</div>
+        <div class="meta">running</div>
+      </div>
+      <div class="shimmer w"></div>
+      <div class="shimmer m"></div>
+    </div>
+    <div class="c6 failed">
+      <div class="head">
+        <div class="icon"><i data-lucide="alert-circle"></i></div>
+        <div class="title">Read browser context</div>
+        <div class="meta">permission needed</div>
+      </div>
+      <div class="error">Need page access permission.</div>
+    </div>
+  </div>
+
+  <div class="section-title">Variant 7 — Step Bar</div>
+  <div class="grid">
+    <div class="c7 done">
+      <div class="top">
+        <div class="icon"><i data-lucide="check"></i></div>
+        <div class="title">Read browser context</div>
+      </div>
+      <div class="steps"><div class="step done"></div><div class="step done"></div><div class="step done"></div></div>
+      <div class="summary">Read 4 tabs</div>
+    </div>
+    <div class="c7 running">
+      <div class="top">
+        <div class="icon"><i data-lucide="loader-2" class="spin"></i></div>
+        <div class="title">Find interactive elements</div>
+      </div>
+      <div class="steps"><div class="step done"></div><div class="step active"></div><div class="step"></div></div>
+      <div class="shimmer w"></div>
+    </div>
+    <div class="c7 failed">
+      <div class="top">
+        <div class="icon"><i data-lucide="alert-circle"></i></div>
+        <div class="title">Read browser context</div>
+      </div>
+      <div class="steps"><div class="step done"></div><div class="step fail"></div><div class="step"></div></div>
+      <div class="summary" style="color:var(--err)">Permission needed</div>
+    </div>
+  </div>
+
+  <div class="section-title">Variant 8 — Inline Chip</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+    <div class="c8 done">
+      <div class="icon"><i data-lucide="check"></i></div>
+      <div class="label">Read browser context</div>
+      <div class="meta">· 4 tabs</div>
+    </div>
+    <div class="c8 running">
+      <div class="icon"><i data-lucide="loader-2" class="spin"></i></div>
+      <div class="label">Find interactive elements</div>
+      <div class="meta">· running</div>
+    </div>
+    <div class="c8 failed">
+      <div class="icon"><i data-lucide="alert-circle"></i></div>
+      <div class="label">Read browser context</div>
+      <div class="meta">· permission</div>
+    </div>
+  </div>
+  <div class="c8 running" style="display:block;width:fit-content">
+    <div class="shimmer w"></div>
+  </div>
+
+  <div class="section-title">Variant 9 — Stacked Status</div>
+  <div class="grid">
+    <div class="c9 done">
+      <div class="badge"><i data-lucide="check"></i></div>
+      <div class="content">
+        <div class="title">Read browser context</div>
+        <div class="sub">Read 4 tabs: Login, Home, ChatGPT, Extensions</div>
+      </div>
+    </div>
+    <div class="c9 running">
+      <div class="badge"><i data-lucide="loader-2" class="spin"></i></div>
+      <div class="content">
+        <div class="title">Find interactive elements</div>
+        <div class="shimmer w"></div>
+        <div class="shimmer m"></div>
+      </div>
+    </div>
+    <div class="c9 failed">
+      <div class="badge"><i data-lucide="alert-circle"></i></div>
+      <div class="content">
+        <div class="title">Read browser context</div>
+        <div class="sub" style="color:var(--err)">Need page access permission</div>
+        <button>Retry</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Variant 10 — Dark Accent</div>
+  <div class="grid">
+    <div class="c10">
+      <div class="head">
+        <div class="icon"><i data-lucide="check"></i></div>
+        <div class="title">Read browser context</div>
+        <div class="meta">4 tabs</div>
+      </div>
+    </div>
+    <div class="c10">
+      <div class="head">
+        <div class="icon"><i data-lucide="loader-2" class="spin"></i></div>
+        <div class="title">Find interactive elements</div>
+        <div class="meta">running</div>
+      </div>
+      <div class="shimmer w"></div>
+      <div class="shimmer m"></div>
+    </div>
+    <div class="c10">
+      <div class="head">
+        <div class="icon"><i data-lucide="alert-circle"></i></div>
+        <div class="title">Read browser context</div>
+        <div class="meta">permission needed</div>
+      </div>
+      <div class="error">Need page access permission.</div>
+      <button>Retry</button>
+    </div>
+  </div>
+</div>
+<script>lucide.createIcons();</script>
+</body>
+</html>

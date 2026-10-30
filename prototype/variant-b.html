@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Variant B - Horizontal Pills</title>
+<style>
+  body{font-family:Inter,system-ui,sans-serif;background:#f7f7f8;color:#222;margin:0;padding:24px}
+  .wrap{max-width:720px;margin:0 auto}
+  h1{font-size:18px;margin:0 0 16px}
+  .row{display:flex;flex-wrap:wrap;gap:8px}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid #e2e2e5;background:#fff;font-size:12.5px}
+  .pill.running{border-color:#f3d6a8;background:#fff8ee}
+  .pill.done{border-color:#cfe8d0;background:#f2faf3}
+  .pill.failed{border-color:#f2c6c2;background:#fef3f2;color:#b3261e}
+  .dot{width:8px;height:8px;border-radius:50%;background:#bbb}
+  .pill.running .dot{background:#b54708;animation:pulse 1.2s ease-in-out infinite}
+  .pill.done .dot{background:#2e7d32}
+  .pill.failed .dot{background:#b3261e}
+  .shimmer{height:6px;border-radius:3px;background:linear-gradient(90deg,#eee,#f7f7f8,#eee);background-size:200% 100%;animation:sh 1.3s linear infinite;margin-top:4px}
+  @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+  .card{margin-top:16px;border:1px solid #e2e2e5;border-radius:12px;background:#fff;padding:12px}
+  .card h3{margin:0 0 8px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Variant B — Horizontal Pills + Card</h1>
+  <div class="row">
+    <div class="pill done"><span class="dot"></span>Read browser context · 4 tabs</div>
+    <div class="pill running"><span class="dot"></span>Find interactive elements<div class="shimmer" style="width:60px"></div></div>
+    <div class="pill failed"><span class="dot"></span>Read browser context · permission</div>
+  </div>
+  <div class="card">
+    <h3>Details</h3>
+    <div style="font-size:12px;color:#666">tabs: Login, Home, ChatGPT, Extensions</div>
+    <button style="margin-top:8px">Retry failed</button>
+  </div>
+</div>
+</body>
+</html>

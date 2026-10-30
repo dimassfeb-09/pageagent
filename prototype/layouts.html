@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>10 Layout References</title>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+  :root{--bg:#f7f7f8;--panel:#fff;--line:#e6e7eb;--text:#1f2023;--muted:#6b6c72;--accent:#2563eb}
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:20px}
+  .wrap{max-width:1100px;margin:0 auto}
+  h1{font-size:20px;margin:0 0 16px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+  .tab{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .stage{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;height:520px;position:relative}
+  .layout{display:none;height:100%}
+  .layout.active{display:block}
+  /* common */
+  .sidebar{background:#fafafa;border-right:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:8px}
+  .main{display:flex;flex-direction:column;height:100%}
+  .topbar{height:48px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:8px}
+  .conv{flex:1;overflow:auto;padding:16px}
+  .msg{max-width:680px;margin:0 auto 12px}
+  .bubble{background:#f4f4f4;border-radius:12px;padding:10px 12px;font-size:13px}
+  .composer{border-top:1px solid var(--line);padding:10px;display:flex;gap:8px}
+  .composer input{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}
+  /* L1 classic */
+  .l1{display:grid;grid-template-columns:240px 1fr;height:100%}
+  /* L2 narrow */
+  .l2{display:grid;grid-template-columns:64px 1fr;height:100%}
+  .l2 .sidebar{align-items:center;padding:8px}
+  .l2 .label{display:none}
+  /* L3 drawer */
+  .l3{display:grid;grid-template-columns:1fr;height:100%}
+  .drawer{position:absolute;left:0;top:0;bottom:0;width:220px;background:#fafafa;border-right:1px solid var(--line);transform:translateX(-100%);transition:transform .2s;padding:12px;z-index:5}
+  .drawer.open{transform:none}
+  /* L4 topnav */
+  .l4{display:flex;flex-direction:column;height:100%}
+  .topnav{height:44px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:12px}
+  /* L5 split */
+  .l5{display:grid;grid-template-columns:1fr 260px;height:100%}
+  .ctx{border-left:1px solid var(--line);padding:12px;background:#fafafa}
+  /* L6 floating composer */
+  .l6{display:grid;grid-template-columns:220px 1fr;height:100%}
+  .l6 .composer{position:absolute;left:240px;right:16px;bottom:16px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+  /* L7 centered focus */
+  .l7{display:flex;flex-direction:column;height:100%}
+  .l7 .conv{display:flex;align-items:center;justify-content:center}
+  .l7 .card{width:min(520px,90%);border:1px solid var(--line);border-radius:16px;padding:24px;background:#fff;text-align:center}
+  /* L8 compact */
+  .l8{display:grid;grid-template-columns:200px 1fr;height:100%}
+  .l8 .msg{margin:0 0 6px}
+  .l8 .bubble{padding:6px 8px;font-size:12px;border-radius:8px}
+  /* L9 cards */
+  .l9{display:grid;grid-template-columns:220px 1fr;height:100%}
+  .l9 .msg{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px;background:#fff}
+  /* L10 minimal */
+  .l10{display:grid;grid-template-columns:1fr;height:100%}
+  .l10 .topbar{border:0}
+  .l10 .msg{border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>10 Layout References</h1>
+  <div class="tabs" id="tabs"></div>
+  <div class="stage" id="stage"></div>
+</div>
+<script>
+const tabs=[['L1','Classic sidebar'],['L2','Narrow sidebar'],['L3','Drawer sidebar'],['L4','Top nav'],['L5','Split context'],['L6','Floating composer'],['L7','Centered focus'],['L8','Compact density'],['L9','Card messages'],['L10','Minimal monochrome']];
+const stage=document.getElementById('stage');
+const tabsEl=document.getElementById('tabs');
+function make(cls,inner){const d=document.createElement('div');d.className='layout '+cls;d.innerHTML=inner;return d;}
+const sampleMsgs=`<div class="msg"><div class="bubble">Hello! How can I help?</div></div><div class="msg"><div class="bubble">Summarize this page.</div></div>`;
+const sidebar=`<div class="sidebar"><div>Chatspace</div><div class="btn">New chat</div><div class="label">Chat 1</div><div class="label">Chat 2</div></div>`;
+const topbar=`<div class="topbar"><button class="btn">Model</button><button class="btn">Share</button><button class="btn">More</button></div>`;
+const composer=`<div class="composer"><input placeholder="Message..."/><button class="btn">Send</button></div>`;
+const layouts=[
+['l1',`<div class="l1">${sidebar}<div class="main">${topbar}<div class="conv">${sampleMsgs}</div>${composer}</div></div>`],
+['l2',`<div class="l2">${sidebar}<div class="main">${topbar}<div class="conv">${sampleMsgs}</div>${composer}</div></div>`],
+['l3',`<div class="l3"><div class="main">${topbar}<button class="btn" style="margin:8px" onclick="document.querySelector('.drawer').classList.toggle('open')">Toggle drawer</button><div class="conv">${sampleMsgs}</div>${composer}</div><div class="drawer">${sidebar}</div></div>`],
+['l4',`<div class="l4"><div class="topnav"><b>Chatspace</b><button class="btn">New</button><button class="btn">Search</button></div><div class="conv" style="flex:1">${sampleMsgs}</div>${composer}</div>`],
+['l5',`<div class="l5"><div class="main">${topbar}<div class="conv">${sampleMsgs}</div>${composer}</div><div class="ctx"><b>Context</b><div style="margin-top:8px;font-size:12px;color:#666">Selected tabs, elements</div></div></div>`],
+['l6',`<div class="l6">${sidebar}<div class="main">${topbar}<div class="conv">${sampleMsgs}</div></div><div class="composer">${composer}</div></div>`],
+['l7',`<div class="l7">${topbar}<div class="conv"><div class="card"><h3 style="margin:0 0 8px">Ask anything.</h3><p style="margin:0 0 12px;color:#666;font-size:13px">Chat, code, and browser help.</p><input class="composer input" style="width:100%" placeholder="Message..."/></div></div></div>`],
+['l8',`<div class="l8">${sidebar}<div class="main">${topbar}<div class="conv">${sampleMsgs}</div>${composer}</div></div>`],
+['l9',`<div class="l9">${sidebar}<div class="main">${topbar}<div class="conv">${sampleMsgs.replace(/class="bubble"/g,'class="msg"')}</div>${composer}</div></div>`],
+['l10',`<div class="l10"><div class="topbar"><b>Chatspace</b></div><div class="conv">${sampleMsgs}</div>${composer}</div>`],
+];
+layouts.forEach(([cls,html],i)=>{
+  const el=make(cls,html);
+  if(i===0) el.classList.add('active');
+  stage.appendChild(el);
+  const t=document.createElement('button');
+  t.className='tab'+(i===0?' active':'');
+  t.textContent=tabs[i][1];
+  t.onclick=()=>{document.querySelectorAll('.layout').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));el.classList.add('active');t.classList.add('active');};
+  tabsEl.appendChild(t);
+});
+lucide.createIcons();
+</script>
+</body>
+</html>
