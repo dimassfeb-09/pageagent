@@ -6,7 +6,7 @@ Repository: https://github.com/dimassfeb-09/pageagent
 
 ## Demo
 
-<video src="assets/pageagent_preview.mp4" controls width="100%"></video>
+<video src="https://raw.githubusercontent.com/dimassfeb-09/pageagent/main/assets/pageagent_preview.mp4" controls width="100%"></video>
 
 ## Install
 
