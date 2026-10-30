@@ -4,6 +4,11 @@ AI agent in your browser. BYOK Chrome extension (React + TypeScript + Tailwind +
 
 Repository: https://github.com/dimassfeb-09/pageagent
 
+## Demo
+
+https://github.com/user-attachments/assets/00e4f009-6e20-4625-9041-61405cf072ca
+
+
 ## Install
 
 ```bash
