@@ -9,9 +9,9 @@ import { AGENT_SYSTEM_PROMPT, ASK_SYSTEM_PROMPT, renderUserContext } from '../li
 import type { TaskState } from '../lib/types';
 import { PROVIDERS, baseUrlOf, providerById } from '../lib/providers';
 import { debounce, getChats, getLanguage, getPreferences, getProviders, getQuickActions, getUserId, saveChatTabs, storage } from '../lib/storage';
-import { executeTool, getTabMarkdown, listOpenTabs } from '../lib/tools';
+import { executeTool, getActiveTab, getActiveTabMarkdown, getTabMarkdown, hasScriptingApi, listOpenTabs } from '../lib/tools';
 import { streamChat, TOOL_DEFS, type LlmMessage } from '../lib/llm';
-import { PanelLeftClose, PanelLeftOpen, Plus, MessageSquare, Search, Settings, ChevronDown, ArrowUp, Share2, MoreHorizontal, Bot, Menu, Sparkles, Zap, Copy, ThumbsUp, ThumbsDown, RefreshCw, MousePointerClick, Keyboard, Globe, Eye, Cog, Star, Paperclip, Image as ImageIcon, File as FileIcon, X, Download, FileJson, Trash2, Archive, Pencil, Moon, Sun, Loader2, Check, AlertCircle } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Plus, MessageSquare, Search, Settings, ChevronDown, ArrowUp, Share2, MoreHorizontal, Bot, Menu, Sparkles, Zap, Copy, ThumbsUp, ThumbsDown, RefreshCw, MousePointerClick, Keyboard, Globe, Eye, Cog, Star, Paperclip, Image as ImageIcon, File as FileIcon, X, Download, FileJson, Trash2, Archive, Pencil, Moon, Sun, Loader2, Check, AlertCircle, Activity } from 'lucide-react';
 import type { ChatMessage, ChatTab, Language, ProviderMap, SelectedElement, SelectedTabInfo, ChatMode, ToolCall } from '../lib/types';
 import { nanoid } from '../lib/types';
 
@@ -109,6 +109,21 @@ export default function App() {
   const [pickedTabs, setPickedTabs] = useState<SelectedTabInfo[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [autoPageContext, setAutoPageContext] = useState(() => { try { return window.localStorage.getItem('pageagent.autoPageContext') !== 'false'; } catch { return true; } });
+  // Presence keep-alive ("Tetap aktif"): when on, the content script pings
+  // the background every ~1.5s and the background dispatches a tiny TRUSTED
+  // mouse move via chrome.debugger, so idle detectors keep seeing activity.
+  // Chrome shows a "debugging this tab" infobar while attached. The flag
+  // lives in page-origin localStorage, so it takes effect in the injected
+  // panel (the sidepanel shares no storage with the page).
+  const [presenceJitter, setPresenceJitter] = useState(() => { try { return window.localStorage.getItem('pageagent.presenceJitter') === 'true'; } catch { return false; } });
+  const togglePresenceJitter = useCallback(() => {
+    setPresenceJitter((prev) => {
+      const next = !prev;
+      try { window.localStorage.setItem('pageagent.presenceJitter', String(next)); } catch { /* ignore */ }
+      if (!next && isExt) { try { chrome.runtime.sendMessage({ type: 'presence-stop' }); } catch { /* ignore */ } }
+      return next;
+    });
+  }, [isExt]);
   const [currentTab, setCurrentTab] = useState<SelectedTabInfo | null>(null);
   const currentTabRef = useRef<SelectedTabInfo | null>(null);
   const [openTabs, setOpenTabs] = useState<{ id: number; title: string; url: string; favIconUrl?: string }[]>([]);
@@ -265,8 +280,8 @@ export default function App() {
     if (!isExt) return;
     const listener = (msg: { success?: boolean; type?: string; aiId?: string; tagName?: string; innerText?: string; value?: string; outerHTML?: string }) => {
       if (msg.type === 'getSelectedElement' && msg.success) {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs: { id: number }[]) => {
-          const item = { aiId: msg.aiId || '', tabId: tabs[0]?.id ?? 0, tagName: msg.tagName || '', innerText: msg.innerText || '', value: msg.value || '', outerHTML: msg.outerHTML || '' };
+        void getActiveTab().then((tab) => {
+          const item = { aiId: msg.aiId || '', tabId: tab?.id ?? 0, tagName: msg.tagName || '', innerText: msg.innerText || '', value: msg.value || '', outerHTML: msg.outerHTML || '' };
           setSelectedElements((prev) => (prev.some((e) => e.aiId === item.aiId && e.tabId === item.tabId) ? prev : [...prev, item]));
         });
       }
@@ -278,10 +293,12 @@ export default function App() {
   const refreshCurrentTab = useCallback(async () => {
     if (!isExt) return;
     try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const tab = tabs[0];
-      if (!tab?.id) { setCurrentTab(null); currentTabRef.current = null; return; }
-      const md = await getTabMarkdown(tab.id).catch(() => null);
+      // In the injected panel chrome.tabs does not exist, so getActiveTab /
+      // getActiveTabMarkdown fall back to reading this page's live document
+      // directly (see lib/tools.ts). Same call works in the real sidepanel.
+      const tab = await getActiveTab();
+      if (!tab) { setCurrentTab(null); currentTabRef.current = null; return; }
+      const md = await getActiveTabMarkdown().catch(() => null);
       const next: SelectedTabInfo = md ? { tabId: tab.id, title: md.title, url: md.url, markdown: md.markdown } : { tabId: tab.id, title: tab.title || 'Untitled', url: tab.url || '', markdown: '' };
       setCurrentTab((prev) => (prev && prev.tabId === next.tabId && prev.url === next.url && prev.markdown === next.markdown ? prev : next));
       currentTabRef.current = next;
@@ -463,7 +480,7 @@ export default function App() {
       if (currentTab) {
         selectedTabs = [currentTab];
       } else if (isExt) {
-        try { const tabs = await chrome.tabs.query({ active: true, currentWindow: true }); if (tabs[0]?.id !== undefined) { const md = await getTabMarkdown(tabs[0].id); if (md) selectedTabs = [{ tabId: tabs[0].id, title: md.title, url: md.url, markdown: md.markdown }]; } } catch { /* context optional */ }
+        try { const md = await getActiveTabMarkdown(); const tab = await getActiveTab(); if (md && tab) selectedTabs = [{ tabId: tab.id, title: md.title, url: md.url, markdown: md.markdown }]; } catch { /* context optional */ }
       }
     }
     const instruction = quickInstruction?.replaceAll('{{date}}', todayStr()) || undefined;
@@ -630,6 +647,13 @@ export default function App() {
   const selectElement = async () => {
     setOpenPop(null);
     if (!isExt) { setErrorMsg('Element picker needs the extension context (load unpacked in Chrome).'); return; }
+    if (!hasScriptingApi()) {
+      // Injected panel: we are already in the target tab, so load the
+      // picker directly (same dynamic-import pattern as bootstrap.ts).
+      try { await import(chrome.runtime.getURL('element-selector.js')); } catch { setErrorMsg('Could not load the element picker.'); return; }
+      (window as unknown as { elementSelectorStart?: () => void }).elementSelectorStart?.();
+      return;
+    }
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tabs[0]?.id === undefined) return;
     await chrome.scripting.executeScript({ target: { tabId: tabs[0].id }, files: ['element-selector.js'] }).catch(() => undefined);
@@ -1149,6 +1173,9 @@ export default function App() {
                   </button>
                   <button type="button" className={`tool-btn labelled${autoPageContext ? ' selected' : ''}`} title="Auto page context" aria-label="Toggle auto page context" onClick={() => setAutoPageContext((v) => !v)}>
                     <Globe size={17} /><span>Auto page</span>
+                  </button>
+                  <button type="button" className={`tool-btn labelled${presenceJitter ? ' selected' : ''}`} title="Tetap aktif: kirim gerakan mouse tepercaya berkala supaya tab tidak dianggap idle (Chrome menampilkan banner debugging saat aktif)" aria-label="Toggle tetap aktif" onClick={togglePresenceJitter}>
+                    <Activity size={17} /><span>Tetap aktif</span>
                   </button>
                   <div className="composer-pop">
                     <button type="button" className="tool-btn labelled" id="toolsBtn" onClick={(e) => { e.stopPropagation(); setOpenPop((p) => (p === 'tools' ? null : 'tools')); }}>

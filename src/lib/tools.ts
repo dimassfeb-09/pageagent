@@ -1,12 +1,48 @@
 // Tool executors run in the sidepanel (chrome.scripting context), per spec.
 // Injected page functions are fully self-contained (no imports/closures)
 // so chrome.scripting can serialize them.
-import { injectedExtractMarkdown } from './defuddle-lite';
+import { extractMarkdownFromDocument, injectedExtractMarkdown } from './defuddle-lite';
 
 const isWebUrl = (url?: string) => !!url && /^https?:\/\//.test(url);
 export const needPageError = (url?: string) =>
   isWebUrl(url) ? null : { error: 'Not a web page' };
 export const needAccessError = { error: 'NEED_PAGE_CONTENT_ACCESS_PERMISSION' };
+
+// --- Injected-UI context detection -------------------------------------------
+// The same App runs in two places: sidepanel.html (an extension page, where
+// chrome.tabs / chrome.scripting exist) and injected-ui.js (a content
+// script, where they do NOT exist). In a content script the code already
+// runs inside the target tab, so the correct fallback is to read the live
+// document directly instead of going through chrome.scripting.
+export const hasTabsApi = () =>
+  typeof chrome !== 'undefined' && typeof chrome.tabs?.query === 'function';
+export const hasScriptingApi = () =>
+  typeof chrome !== 'undefined' && typeof chrome.scripting?.executeScript === 'function';
+/** The tab this code is injected into (content-script context only). */
+export function getCurrentTabDirect(): { id: number; title: string; url: string } {
+  return { id: 0, title: document.title || 'Untitled', url: location.href };
+}
+export function getCurrentTabMarkdownDirect(): { title: string; url: string; markdown: string } {
+  const tab = getCurrentTabDirect();
+  return { ...tab, markdown: extractMarkdownFromDocument(document) };
+}
+/** Active tab: via chrome.tabs on extension pages, direct document otherwise. */
+export async function getActiveTab(): Promise<{ id: number; title: string; url: string } | null> {
+  if (hasTabsApi()) {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const t = tabs?.[0];
+    return t ? { id: t.id, title: t.title || 'Untitled', url: t.url || '' } : null;
+  }
+  return getCurrentTabDirect();
+}
+/** Markdown of the active tab, via chrome.scripting or direct DOM read. */
+export async function getActiveTabMarkdown(): Promise<{ title: string; url: string; markdown: string } | null> {
+  const tab = await getActiveTab();
+  if (!tab) return null;
+  if (hasScriptingApi()) return getTabMarkdown(tab.id).catch(() => null);
+  if (!isWebUrl(tab.url)) return null;
+  return getCurrentTabMarkdownDirect();
+}
 
 export function injectedFindElements(): { type: string; content: string; id: string; shadowDepth: number }[] {
   const out: { type: string; content: string; id: string; shadowDepth: number }[] = [];
@@ -268,10 +304,20 @@ export function injectedCollectImages(): string[] {
   return [...urls];
 }
 async function exec<T>(tabId: number, func: (...args: never[]) => T, args: unknown[] = []): Promise<T> {
+  if (!hasScriptingApi()) {
+    // Content-script context: we are already inside the target tab, so run
+    // the injected function directly against the live document.
+    return func(...(args as never[]));
+  }
   const res = await chrome.scripting.executeScript({ target: { tabId }, func, args });
   return res?.[0]?.result as T;
 }
-async function tabOf(tabId: number) { return chrome.tabs.get(tabId); }
+async function tabOf(tabId: number) {
+  if (!hasTabsApi()) {
+    return { id: tabId, url: location.href, title: document.title, status: 'complete' };
+  }
+  return chrome.tabs.get(tabId);
+}
 export async function waitTabLoadFinished(tabId: number, timeoutMs = 30000): Promise<{ success: boolean }> {
   const start = Date.now();
   for (;;) {
@@ -347,7 +393,7 @@ export async function executeTool(name: string, args: Record<string, unknown>): 
       await chrome.tabGroups.update(groupId, { title: String(args.title), color: (args.color as string) || 'cyan' });
       return { groupId };
     }
-    case 'getAllTabs': { const tabs = await chrome.tabs.query({}); return { tabs: tabs.map((t: { id: number; title: string }) => ({ id: t.id, title: t.title })) }; }
+    case 'getAllTabs': { if (!hasTabsApi()) { const cur = getCurrentTabDirect(); return { tabs: [{ id: cur.id, title: cur.title }] }; } const tabs = await chrome.tabs.query({}); return { tabs: tabs.map((t: { id: number; title: string }) => ({ id: t.id, title: t.title })) }; }
     case 'scrollToBottom': {
       const t = await tabOf(tabId!).catch(() => null);
       if (!t || !isWebUrl(t.url)) return { error: 'Not a web page' };
@@ -390,16 +436,23 @@ export async function executeTool(name: string, args: Record<string, unknown>): 
 }
 /** Extra executor (not a model tool): focus a tab. */
 export async function goToTab(tabId: number): Promise<void> {
+  if (!hasTabsApi()) return; // already in this tab (content-script context)
   const t = await chrome.tabs.get(tabId);
   await chrome.tabs.update(tabId, { active: true });
   if (t.windowId) await chrome.windows.update(t.windowId, { focused: true });
 }
 export async function getTabMarkdown(tabId: number): Promise<{ title: string; url: string; markdown: string } | null> {
+  if (!hasScriptingApi()) {
+    // Content-script context: read this page's document directly.
+    if (!isWebUrl(location.href)) return null;
+    return getCurrentTabMarkdownDirect();
+  }
   const t = await tabOf(tabId).catch(() => null);
   if (!t || !isWebUrl(t.url)) return null;
   return { title: t.title, url: t.url, markdown: await exec(tabId, injectedExtractMarkdown) };
 }
 export async function listOpenTabs(): Promise<{ id: number; title: string; url: string; favIconUrl?: string }[]> {
+  if (!hasTabsApi()) return [getCurrentTabDirect()];
   const tabs = await chrome.tabs.query({});
   return tabs.map((t: { id: number; title: string; url: string; favIconUrl?: string }) => ({ id: t.id, title: t.title, url: t.url, favIconUrl: t.favIconUrl }));
 }

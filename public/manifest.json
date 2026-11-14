@@ -12,9 +12,12 @@
   "commands": {
     "_execute_action": { "suggested_key": { "default": "Ctrl+J", "mac": "Command+J" } }
   },
-  "permissions": ["scripting", "tabs", "storage", "tabGroups", "search", "sidePanel"],
+  "permissions": ["scripting", "tabs", "storage", "tabGroups", "search", "sidePanel", "debugger"],
   "host_permissions": ["<all_urls>"],
   "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
-  "content_scripts": [{ "matches": ["<all_urls>"], "js": ["bootstrap.js"], "run_at": "document_idle", "all_frames": false }],
+  "content_scripts": [
+    { "matches": ["<all_urls>"], "js": ["presence.js"], "run_at": "document_start", "world": "MAIN", "all_frames": false },
+    { "matches": ["<all_urls>"], "js": ["bootstrap.js"], "run_at": "document_idle", "all_frames": false }
+  ],
   "web_accessible_resources": [{ "resources": ["element-selector.js", "bootstrap.js", "injected-ui.js", "sidepanel.html", "assets/*"], "matches": ["<all_urls>"] }]
 }

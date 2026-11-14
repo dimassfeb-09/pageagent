@@ -4,7 +4,9 @@
 export function extractMarkdownFromDocument(doc: Document): string {
   const clone = doc.cloneNode(true) as Document;
   const root = clone.documentElement;
-  root.querySelectorAll('script, style, nav, header, footer, aside, form, noscript, iframe, svg').forEach((n) => n.remove());
+  // NOTE: <form> is intentionally NOT stripped: quiz/exam questions and
+  // their labels/inputs live inside forms, stripping it made pages read empty.
+  root.querySelectorAll('script, style, nav, header, footer, aside, noscript, iframe, svg').forEach((n) => n.remove());
   let main: Element | null = clone.querySelector('article') || clone.querySelector('main');
   if (!main) {
     let best: Element | null = null; let bestLen = 0;
@@ -19,8 +21,13 @@ export function extractMarkdownFromDocument(doc: Document): string {
     for (const child of Array.from(el.children)) {
       const tag = child.tagName.toLowerCase();
       const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
-      if (!text && tag !== 'img' && tag !== 'table') continue;
+      if (!text && tag !== 'img' && tag !== 'table' && tag !== 'input' && tag !== 'textarea' && tag !== 'select') continue;
       if (/^h[1-6]$/.test(tag)) lines.push(`${'#'.repeat(Number(tag[1]))} ${text}`);
+      else if (tag === 'input' || tag === 'textarea') {
+        const v = ((child as HTMLInputElement).value || child.getAttribute('placeholder') || child.getAttribute('aria-label') || '').trim();
+        if (v) lines.push(v);
+      }
+      else if (tag === 'select') { const sel = child as HTMLSelectElement; const v = sel.options[sel.selectedIndex]?.textContent?.trim() || ''; if (v) lines.push(v); }
       else if (tag === 'p') lines.push(text);
       else if (tag === 'a') { const href = child.getAttribute('href'); lines.push(href ? `[${text}](${href})` : text); }
       else if (tag === 'img') { const src = child.getAttribute('src'); const alt = child.getAttribute('alt') || ''; if (src) lines.push(`![${alt}](${src})`); }
@@ -42,7 +49,9 @@ export function extractMarkdownFromDocument(doc: Document): string {
 export function injectedExtractMarkdown(): string {
   const doc = document;
   const clone = doc.cloneNode(true) as Document;
-  clone.querySelectorAll('script, style, nav, header, footer, aside, form, noscript, iframe, svg').forEach((n) => n.remove());
+  // NOTE: <form> is intentionally NOT stripped: quiz/exam questions and
+  // their labels/inputs live inside forms, stripping it made pages read empty.
+  clone.querySelectorAll('script, style, nav, header, footer, aside, noscript, iframe, svg').forEach((n) => n.remove());
   let main: Element | null = clone.querySelector('article') || clone.querySelector('main');
   if (!main) {
     let best: Element | null = null; let bestLen = 0;
@@ -57,8 +66,13 @@ export function injectedExtractMarkdown(): string {
     for (const child of Array.from(el.children)) {
       const tag = child.tagName.toLowerCase();
       const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
-      if (!text && tag !== 'img' && tag !== 'table') continue;
+      if (!text && tag !== 'img' && tag !== 'table' && tag !== 'input' && tag !== 'textarea' && tag !== 'select') continue;
       if (/^h[1-6]$/.test(tag)) lines.push('#'.repeat(Number(tag[1])) + ' ' + text);
+      else if (tag === 'input' || tag === 'textarea') {
+        const v = ((child as HTMLInputElement).value || child.getAttribute('placeholder') || child.getAttribute('aria-label') || '').trim();
+        if (v) lines.push(v);
+      }
+      else if (tag === 'select') { const sel = child as HTMLSelectElement; const v = sel.options[sel.selectedIndex]?.textContent?.trim() || ''; if (v) lines.push(v); }
       else if (tag === 'p') lines.push(text);
       else if (tag === 'a') { const href = child.getAttribute('href'); lines.push(href ? '[' + text + '](' + href + ')' : text); }
       else if (tag === 'img') { const src = child.getAttribute('src'); const alt = child.getAttribute('alt') || ''; if (src) lines.push('![' + alt + '](' + src + ')'); }

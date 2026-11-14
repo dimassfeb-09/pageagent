@@ -15,6 +15,95 @@ chrome.action?.onClicked.addListener((tab: { id?: number; windowId?: number }) =
   if (tab.windowId !== undefined) chrome.sidePanel?.open({ windowId: tab.windowId }).catch(() => undefined);
 });
 
+// --- Presence keep-alive (opt-in, "Tetap aktif" toggle in the panel) -------
+// The content script pings us every ~1.5s while the toggle is on. We keep a
+// chrome.debugger session attached to that tab and dispatch a tiny trusted
+// mouse move (Input.dispatchMouseEvent). Unlike synthetic DOM events, CDP
+// input is trusted (isTrusted === true), so isTrusted-based idle detectors
+// see real activity. Costs: Chrome shows a "PageAgent is debugging this
+// tab" infobar while attached, and attach fails while DevTools is open on
+// the tab (reported back, retried after 10s).
+const presenceDebug: { lastPingAt: string | null; lastError: string; attachedTabs: number[]; emulation: { focus: boolean; lifecycle: boolean } } = { lastPingAt: null, lastError: '', attachedTabs: [], emulation: { focus: false, lifecycle: false } };
+(globalThis as unknown as Record<string, unknown>).__pageagentPresence = presenceDebug;
+const presenceTabs = new Set<number>();
+const presenceAttachFailedAt = new Map<number, number>();
+const presenceEmulation = new Map<number, { focus: boolean; lifecycle: boolean; lastApplied: number }>();
+chrome.debugger?.onDetach?.addListener((source: { tabId?: number }) => {
+  if (source.tabId !== undefined) {
+    presenceTabs.delete(source.tabId); presenceEmulation.delete(source.tabId); presenceDebug.attachedTabs = [...presenceTabs];
+    if (presenceTabs.size === 0) presenceDebug.emulation = { focus: false, lifecycle: false };
+  }
+});
+// Keep a debugged tab out of Chrome's idle lifecycle: focus emulation makes
+// hasFocus-gated work keep running in a background tab, and forcing the
+// lifecycle state to "active" keeps the tab from being frozen/discarded.
+// Applied on attach and re-applied at most every 10s (a navigation can land
+// the new document back in a throttled state). Each command is best-effort:
+// Page.setWebLifecycleState is experimental and may not exist on every
+// Chrome build — a missing command must never break the mouse jitter.
+async function ensurePresenceEmulation(tabId: number): Promise<void> {
+  const now = Date.now();
+  const st = presenceEmulation.get(tabId) ?? { focus: false, lifecycle: false, lastApplied: 0 };
+  if (now - st.lastApplied < 10_000) return;
+  st.lastApplied = now;
+  try { await chrome.debugger.sendCommand({ tabId }, 'Emulation.setFocusEmulationEnabled', { enabled: true }); st.focus = true; }
+  catch { st.focus = false; }
+  try { await chrome.debugger.sendCommand({ tabId }, 'Page.setWebLifecycleState', { state: 'active' }); st.lifecycle = true; }
+  catch { st.lifecycle = false; }
+  presenceEmulation.set(tabId, st);
+  presenceDebug.emulation = { focus: st.focus, lifecycle: st.lifecycle };
+}
+chrome.runtime.onMessage.addListener((msg: { type?: string; x?: number; y?: number }, sender: { tab?: { id?: number } }, sendResponse: (r: unknown) => void) => {
+  if (msg?.type === 'presence-ping') { void handlePresencePing(msg, sender, sendResponse); return true; }
+  if (msg?.type === 'presence-stop') {
+    const id = sender.tab?.id;
+    if (id !== undefined) {
+      presenceTabs.delete(id); presenceEmulation.delete(id); presenceDebug.attachedTabs = [...presenceTabs];
+      if (presenceTabs.size === 0) presenceDebug.emulation = { focus: false, lifecycle: false };
+      // Best-effort restore: stop emulating focus so the tab behaves normally.
+      void chrome.debugger.sendCommand({ tabId: id }, 'Emulation.setFocusEmulationEnabled', { enabled: false }).catch(() => undefined);
+      void chrome.debugger.detach({ tabId: id }).catch(() => undefined);
+    }
+    sendResponse({ ok: true });
+    return false;
+  }
+  return false;
+});
+async function handlePresencePing(msg: { x?: number; y?: number }, sender: { tab?: { id?: number } }, sendResponse: (r: unknown) => void) {
+  const tabId = sender.tab?.id;
+  if (tabId === undefined) { sendResponse({ ok: false, error: 'no-tab' }); return; }
+  const x = Math.round(msg.x ?? 0), y = Math.round(msg.y ?? 0);
+  const dispatch = () => chrome.debugger.sendCommand({ tabId }, 'Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'none', clickCount: 0 });
+  try {
+    if (!presenceTabs.has(tabId)) {
+      const failedAt = presenceAttachFailedAt.get(tabId) ?? 0;
+      if (Date.now() - failedAt < 10_000) { sendResponse({ ok: false, error: 'attach-backoff' }); return; }
+      await chrome.debugger.attach({ tabId }, '1.3');
+      presenceTabs.add(tabId); presenceDebug.attachedTabs = [...presenceTabs];
+      await ensurePresenceEmulation(tabId);
+    } else {
+      await ensurePresenceEmulation(tabId);
+    }
+    try { await dispatch(); }
+    catch {
+      // Session died (e.g. service worker restarted): re-attach once.
+      presenceTabs.delete(tabId);
+      await chrome.debugger.attach({ tabId }, '1.3');
+      presenceTabs.add(tabId); presenceDebug.attachedTabs = [...presenceTabs];
+      await ensurePresenceEmulation(tabId);
+      await dispatch();
+    }
+    presenceDebug.lastPingAt = new Date().toISOString(); presenceDebug.lastError = '';
+    sendResponse({ ok: true });
+  } catch (e) {
+    presenceTabs.delete(tabId); presenceDebug.attachedTabs = [...presenceTabs];
+    presenceAttachFailedAt.set(tabId, Date.now());
+    const err = e instanceof Error ? e.message : 'attach-failed';
+    presenceDebug.lastError = err;
+    sendResponse({ ok: false, error: err });
+  }
+}
+
 chrome.runtime.onConnect.addListener((port: any) => {
   if (port.name !== 'ai-stream') return;
   let controller: AbortController | null = null;

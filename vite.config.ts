@@ -16,6 +16,7 @@ export default defineConfig({
         background: entry('./src/background/main.ts'),
         'element-selector': entry('./src/content/element-selector.ts'),
         'bootstrap': entry('./src/content/bootstrap.ts'),
+        'presence': entry('./src/content/presence.ts'),
         'injected-ui': entry('./src/content/injected-ui.tsx'),
       },
       output: {
@@ -23,6 +24,7 @@ export default defineConfig({
           if (chunk.name === 'background') return 'background.js';
           if (chunk.name === 'element-selector') return 'element-selector.js';
            if (chunk.name === 'bootstrap') return 'bootstrap.js';
+           if (chunk.name === 'presence') return 'presence.js';
            if (chunk.name === 'injected-ui') return 'injected-ui.js';
           return 'assets/[name]-[hash].js';
         },
